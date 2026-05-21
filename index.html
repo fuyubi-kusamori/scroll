@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scroll Recorder v17</title>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap');
+  :root{--bg:#0a0a0d;--sf:#111115;--sf2:#19191e;--bd:#24242c;--tx:#dcd9d1;--dm:#65636d;--ac:#c8ff00;--rd:#ff3b3b;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{background:var(--sf);border-bottom:1px solid var(--bd);padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
+  .logo{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:2px;color:var(--ac);text-transform:uppercase;white-space:nowrap;}
+  .logo .ver{font-size:9px;color:var(--dm);margin-left:4px;}
+  .src-tabs{display:flex;border:1px solid var(--bd);border-radius:5px;overflow:hidden;flex-shrink:0;}
+  .src-tabs button{padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;background:var(--sf2);color:var(--dm);border:none;font-family:'DM Sans',sans-serif;}
+  .src-tabs button.on{background:var(--ac);color:var(--bg);}
+  .sp{display:none;}.sp.on{display:contents;}
+  .src-input-wrap{flex:1;min-width:180px;}
+  .src-input-wrap input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:'Space Mono',monospace;font-size:11px;padding:6px 10px;outline:none;}
+  .src-input-wrap input:focus{border-color:var(--ac);}
+  .src-input-wrap input::placeholder{color:var(--dm);}
+  .tbtn{padding:6px 14px;background:var(--sf2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+  .tbtn:hover{border-color:var(--ac);color:var(--ac);}
+  .flbl{padding:6px 14px;background:var(--sf2);border:1px solid var(--bd);border-radius:5px;color:var(--dm);font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;}
+  .flbl:hover,.flbl.on{border-color:var(--ac);color:var(--ac);}
+  .flbl input{display:none;}
+  .hrow{width:100%;display:flex;gap:8px;align-items:center;}
+  .hrow textarea{flex:1;height:32px;min-height:32px;max-height:80px;background:var(--bg);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:'Space Mono',monospace;font-size:11px;padding:6px 8px;resize:vertical;outline:none;}
+  .hrow textarea:focus{border-color:var(--ac);}
+  .hrow textarea::placeholder{color:var(--dm);}
+  .note{font-size:10px;color:var(--dm);line-height:1.5;}
+  .app{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+  @media(min-width:800px){.app{flex-direction:row;}.sidebar{order:-1;width:310px;max-height:none;border-right:1px solid var(--bd);border-bottom:none;}.preview{flex:1;order:1;}}
+  .preview{flex:1;min-height:160px;position:relative;overflow:hidden;background:#0e0e0e;}
+  .preview.rec{animation:rp 1.4s infinite;}
+  @keyframes rp{0%,100%{box-shadow:inset 0 0 0 2px transparent}50%{box-shadow:inset 0 0 0 2px var(--rd)}}
+  #contentFrame{width:100%;height:100%;border:none;background:#fff;}
+  .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Space Mono',monospace;font-size:12px;color:#555;line-height:2.4;pointer-events:none;background:#fff;z-index:1;}
+  .ph.hide{display:none;}
+  .sidebar{background:var(--sf);padding:12px 14px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;border-bottom:1px solid var(--bd);flex-shrink:0;}
+  @media(max-width:799px){.sidebar{max-height:50vh;}}
+  .lbl{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--dm);}
+  .dvd{border:none;border-top:1px solid var(--bd);margin:2px 0;}
+  .sizes{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+  .sz{padding:6px 4px;background:var(--bg);border:1px solid var(--bd);border-radius:5px;color:var(--dm);font-size:10px;font-family:'Space Mono',monospace;cursor:pointer;text-align:center;}
+  .sz.on{border-color:var(--ac);color:var(--ac);}
+  .sz:hover:not(.on){color:var(--tx);}
+  .csz{display:none;gap:6px;align-items:center;font-size:11px;color:var(--dm);}
+  .csz.on{display:flex;}
+  .csz input{width:70px;text-align:center;background:var(--bg);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:'Space Mono',monospace;font-size:11px;padding:5px 6px;outline:none;}
+  .sl{display:flex;flex-direction:column;gap:2px;}
+  .sr{display:flex;justify-content:space-between;align-items:center;}
+  .sr label{font-size:11px;color:var(--dm);}
+  .sr .v{font-family:'Space Mono',monospace;font-size:11px;color:var(--ac);min-width:45px;text-align:right;}
+  input[type="range"]{-webkit-appearance:none;width:100%;height:3px;background:var(--bd);border-radius:2px;outline:none;}
+  input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--ac);cursor:pointer;}
+  .chk{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dm);cursor:pointer;}
+  .chk input{accent-color:var(--ac);}
+  .fmtr{display:flex;gap:4px;}
+  .fb{flex:1;padding:7px 4px;text-align:center;font-size:11px;font-weight:500;cursor:pointer;background:var(--bg);border:1px solid var(--bd);border-radius:5px;color:var(--dm);font-family:'Space Mono',monospace;}
+  .fb.on{border-color:var(--ac);color:var(--ac);}
+  .fb:hover:not(.on){color:var(--tx);}
+  .prg{width:100%;height:3px;background:var(--bd);border-radius:2px;overflow:hidden;}
+  .pf{height:100%;width:0%;background:var(--ac);transition:width .15s;}
+  .sts{font-family:'Space Mono',monospace;font-size:10px;color:var(--dm);text-align:center;min-height:14px;}
+  .sts.rc{color:var(--rd);}
+  .rdot{display:inline-block;width:6px;height:6px;background:var(--rd);border-radius:50%;margin-right:4px;animation:bk .8s infinite;}
+  @keyframes bk{0%,100%{opacity:1}50%{opacity:.12}}
+  .btns{display:flex;gap:6px;margin-top:auto;padding-top:4px;}
+  .btn{flex:1;padding:12px 6px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
+  .brec{background:var(--ac);color:var(--bg);}
+  .brec:disabled{opacity:.35;cursor:not-allowed;}
+  .bstop{background:var(--rd);color:#fff;display:none;}
+  .bsave{background:transparent;border:1px solid var(--ac);color:var(--ac);display:none;}
+  .bsave:hover{background:var(--ac);color:var(--bg);}
+  .guide{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;}
+
+  /* Fullscreen mode during recording — hide everything except preview */
+  body.recording .topbar{display:none;}
+  body.recording .sidebar{display:none;}
+  body.recording .preview{min-height:100%;}
+  .guide.show{display:flex;}
+  .gbox{background:var(--sf);border:1px solid var(--ac);border-radius:12px;padding:32px;max-width:440px;width:90%;text-align:center;}
+  .gbox h3{font-family:'Space Mono',monospace;font-size:14px;color:var(--ac);margin-bottom:16px;}
+  .gbox .step{display:flex;align-items:flex-start;gap:12px;text-align:left;margin:10px 0;}
+  .gbox .sn{font-family:'Space Mono',monospace;font-size:18px;color:var(--ac);font-weight:700;min-width:24px;}
+  .gbox .st{font-size:12px;line-height:1.7;color:var(--tx);}
+  .gbtn{margin-top:16px;padding:10px 28px;background:var(--ac);color:var(--bg);border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">Scroll Recorder<span class="ver">v17</span></span>
+  <div class="src-tabs">
+    <button class="on" data-t="url" onclick="swSrc(this)">URL</button>
+    <button data-t="file" onclick="swSrc(this)">File</button>
+    <button data-t="html" onclick="swSrc(this)">HTML</button>
+  </div>
+  <div class="sp on" id="sp-url">
+    <div class="src-input-wrap">
+      <input type="text" id="urlIn" placeholder="https://example.com" onkeydown="if(event.key==='Enter')loadUrl()">
+    </div>
+    <button class="tbtn" onclick="loadUrl()">Load</button>
+    <span class="note" style="white-space:nowrap">iframe-compatible only</span>
+  </div>
+  <div class="sp" id="sp-file">
+    <label class="flbl" id="flbl">
+      <span id="fnm">Choose HTML file</span>
+      <input type="file" accept=".html,.htm" onchange="loadFile(event)">
+    </label>
+  </div>
+  <div class="sp" id="sp-html">
+    <div class="hrow">
+      <textarea id="htIn" placeholder="Paste HTML here..."></textarea>
+      <button class="tbtn" onclick="loadHtml()">Load</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <div class="preview" id="pv">
+    <div class="ph" id="ph">
+      Load content → press ● REC<br>
+      Browser will ask to share this tab<br>
+      Select "This Tab" → Share
+    </div>
+    <iframe id="contentFrame"></iframe>
+  </div>
+  <div class="sidebar">
+
+    <div class="lbl">Output Size</div>
+    <div class="sizes">
+      <button class="sz" data-w="1920" data-h="1080" onclick="pickSz(this)">1920×1080</button>
+      <button class="sz on" data-w="1280" data-h="720" onclick="pickSz(this)">1280×720</button>
+      <button class="sz" data-w="854" data-h="480" onclick="pickSz(this)">854×480</button>
+      <button class="sz" data-w="1080" data-h="1920" onclick="pickSz(this)">1080×1920</button>
+      <button class="sz" data-w="720" data-h="1280" onclick="pickSz(this)">720×1280</button>
+      <button class="sz" data-w="1080" data-h="1080" onclick="pickSz(this)">1080×1080</button>
+      <button class="sz" data-w="0" data-h="0" onclick="pickSz(this)">Custom</button>
+      <button class="sz" data-w="-1" data-h="-1" onclick="pickSz(this)">Auto</button>
+    </div>
+    <div class="csz" id="csz">
+      <input type="number" id="cW" value="1280" min="100" max="3840" placeholder="W"> ×
+      <input type="number" id="cH" value="720" min="100" max="2160" placeholder="H">
+    </div>
+    <p class="note">Note: getDisplayMedia captures the tab at its native resolution. Output size affects MP4 re-encoding only.</p>
+
+    <hr class="dvd">
+    <div class="lbl">Output Format</div>
+    <div class="fmtr">
+      <button class="fb on" onclick="pickFmt('webm',this)">WebM</button>
+      <button class="fb" onclick="pickFmt('mp4',this)">MP4</button>
+    </div>
+    <p class="note" id="fmtNote">WebM — native, fast. Plays in Chrome/VLC.</p>
+
+    <hr class="dvd">
+    <div class="lbl">Settings</div>
+    <div class="sl">
+      <div class="sr"><label>Scroll Speed</label><span class="v" id="vSpd">1.5 px</span></div>
+      <input type="range" min="0.5" max="10" step="0.5" value="1.5" oninput="C.spd=+this.value;E('vSpd').textContent=this.value+' px'">
+    </div>
+    <div class="sl">
+      <div class="sr"><label>Start Delay</label><span class="v" id="vDel">1.0 s</span></div>
+      <input type="range" min="0" max="5" step="0.5" value="1" oninput="C.del=+this.value;E('vDel').textContent=this.value+' s'">
+    </div>
+    <div class="sl">
+      <div class="sr"><label>End Pause</label><span class="v" id="vEnd">2.0 s</span></div>
+      <input type="range" min="0" max="5" step="0.5" value="2" oninput="C.endP=+this.value;E('vEnd').textContent=this.value+' s'">
+    </div>
+    <label class="chk"><input type="checkbox" id="chkAuto" checked> Auto-stop at bottom</label>
+
+    <hr class="dvd">
+    <div class="prg"><div class="pf" id="pf"></div></div>
+    <div class="sts" id="sts">Ready</div>
+    <div class="btns">
+      <button class="btn brec" id="bRec" onclick="startRec()">● Rec</button>
+      <button class="btn bstop" id="bStop" onclick="stopRec()">■ Stop</button>
+      <button class="btn bsave" id="bSave" onclick="saveVideo()">↓ Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="guide" id="guide">
+  <div class="gbox">
+    <h3>How it works</h3>
+    <div class="step"><span class="sn">1</span><span class="st">Load content (URL / File / HTML)</span></div>
+    <div class="step"><span class="sn">2</span><span class="st">Press ● REC → share <strong>this tab</strong></span></div>
+    <div class="step"><span class="sn">3</span><span class="st">Auto-scroll + pixel-perfect recording</span></div>
+    <div class="step"><span class="sn">4</span><span class="st">Stops at bottom → download WebM or MP4</span></div>
+    <button class="gbtn" onclick="E('guide').classList.remove('show');localStorage.setItem('sr_guide','1')">Got it</button>
+  </div>
+</div>
+
+<script>
+const E=id=>document.getElementById(id);
+const C={spd:1.5,del:1,endP:2,fmt:'webm',w:1280,h:720,sizeMode:'preset'};
+let recording=false,blobUrl=null,loaded=false;
+let captureStream=null,recorder=null,chunks=[],scrollTimer=null;
+let recStartMs=0, recDurationMs=0;
+
+if(!localStorage.getItem('sr_guide'))E('guide').classList.add('show');
+
+// ── Source ──
+function swSrc(b){
+  b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.sp').forEach(p=>p.classList.remove('on'));
+  b.classList.add('on');E('sp-'+b.dataset.t).classList.add('on');
+}
+function loadHtml(){
+  const v=E('htIn').value;if(!v.trim())return;
+  E('contentFrame').srcdoc=v;
+  E('contentFrame').onload=()=>{loaded=true;};
+  E('ph').classList.add('hide');setSts('HTML loaded');
+}
+function loadUrl(){
+  let u=E('urlIn').value.trim();if(!u)return;
+  if(!/^https?:\/\//i.test(u))u='https://'+u;E('urlIn').value=u;
+  const f=E('contentFrame');f.removeAttribute('srcdoc');f.src=u;
+  f.onload=()=>{loaded=true;setSts('Loaded');};
+  E('ph').classList.add('hide');setSts('Loading...');
+}
+function loadFile(ev){
+  const f=ev.target.files[0];if(!f)return;
+  E('fnm').textContent=f.name;E('flbl').classList.add('on');
+  const r=new FileReader();
+  r.onload=e=>{
+    E('contentFrame').srcdoc=e.target.result;
+    E('contentFrame').onload=()=>{loaded=true;};
+    E('ph').classList.add('hide');setSts(f.name+' loaded');
+  };r.readAsText(f);
+}
+
+// ── Size ──
+function pickSz(b){
+  document.querySelectorAll('.sz').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const w=+b.dataset.w,h=+b.dataset.h;
+  if(w===0){C.sizeMode='custom';E('csz').classList.add('on');}
+  else if(w===-1){C.sizeMode='auto';E('csz').classList.remove('on');}
+  else{C.sizeMode='preset';C.w=w;C.h=h;E('csz').classList.remove('on');}
+}
+function getOutSize(videoW,videoH){
+  if(C.sizeMode==='custom'){
+    let w=+E('cW').value||1280,h=+E('cH').value||720;
+    if(w%2)w++;if(h%2)h++;return[w,h];
+  }
+  if(C.sizeMode==='auto') return[videoW,videoH];
+  return[C.w,C.h];
+}
+
+// ── Format ──
+function pickFmt(fmt,b){
+  document.querySelectorAll('.fb').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');C.fmt=fmt;
+  E('fmtNote').textContent=fmt==='webm'
+    ?'WebM — native, fast. Plays in Chrome/VLC.'
+    :'MP4 — re-encoded after recording via WebCodecs.';
+}
+
+// ── Helpers ──
+function setSts(msg,rec){const el=E('sts');el.className='sts'+(rec?' rc':'');el.innerHTML=(rec?'<span class="rdot"></span>':'')+msg;}
+function setPrg(p){E('pf').style.width=Math.min(p,100)+'%';}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function dlBlob(url,name){const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();}
+function getTimestamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes());}
+function getScrollEl(){try{const d=E('contentFrame').contentDocument;return d.scrollingElement||d.documentElement||d.body;}catch(e){return null;}}
+
+// ══════════════════════════════════════════
+//  RECORDING — getDisplayMedia (tab capture)
+// ══════════════════════════════════════════
+async function startRec(){
+  if(!loaded){setSts('Load content first');return;}
+  const scrollEl=getScrollEl();
+  if(!scrollEl){setSts('Cannot access iframe (cross-origin?)');return;}
+  if(blobUrl){URL.revokeObjectURL(blobUrl);blobUrl=null;}
+  chunks=[];scrollEl.scrollTop=0;setPrg(0);
+
+  try{
+    captureStream=await navigator.mediaDevices.getDisplayMedia({
+      video:{displaySurface:'browser',frameRate:30},
+      audio:false,
+      preferCurrentTab:true,
+      selfBrowserSurface:'include'
+    });
+  }catch(e){setSts('Screen capture cancelled');return;}
+
+  captureStream.getVideoTracks()[0].onended=()=>{if(recording)stopRec();};
+
+  recording=true;
+  document.body.classList.add('recording');
+  E('bRec').style.display='none';E('bStop').style.display='block';E('bSave').style.display='none';
+  E('pv').classList.add('rec');
+
+  const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+    .find(m=>MediaRecorder.isTypeSupported(m))||'video/webm';
+  recorder=new MediaRecorder(captureStream,{mimeType:mime,videoBitsPerSecond:8_000_000});
+  recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+  recorder.onstop=onRecDone;
+
+  setSts('Waiting '+C.del+'s...',true);
+  await sleep(C.del*1000);
+  if(!recording)return;
+
+  recorder.start(200);
+  recStartMs=performance.now();
+  setSts('Recording...',true);
+
+  const autoStop=E('chkAuto').checked;
+  let endTriggered=false;
+  scrollTimer=setInterval(()=>{
+    if(!recording)return;
+    scrollEl.scrollTop+=C.spd;
+    const maxS=scrollEl.scrollHeight-scrollEl.clientHeight;
+    setPrg(maxS>0?(scrollEl.scrollTop/maxS)*100:100);
+    if(autoStop&&!endTriggered&&maxS>0&&scrollEl.scrollTop>=maxS-1){
+      endTriggered=true;
+      setSts('End reached — '+C.endP+'s',true);
+      setPrg(100);
+      setTimeout(()=>{if(recording)stopRec();},C.endP*1000);
+    }
+  },16);
+}
+
+function stopRec(){
+  recording=false;
+  recDurationMs=performance.now()-recStartMs;
+  if(scrollTimer){clearInterval(scrollTimer);scrollTimer=null;}
+  if(recorder&&recorder.state!=='inactive')recorder.stop();
+  if(captureStream){captureStream.getTracks().forEach(t=>t.stop());captureStream=null;}
+  document.body.classList.remove('recording');
+  E('bStop').style.display='none';E('bRec').style.display='block';
+  E('pv').classList.remove('rec');
+  setSts('Processing...');
+}
+
+function onRecDone(){
+  const webmBlob=new Blob(chunks,{type:'video/webm'});
+  blobUrl=URL.createObjectURL(webmBlob);
+  const mb=(webmBlob.size/1024/1024).toFixed(2);
+
+  if(C.fmt==='mp4'){
+    setSts('WebM captured ('+mb+' MB) — converting to MP4...');
+    convertToMp4(webmBlob);
+  } else {
+    setSts('Done — '+mb+' MB (WebM)');
+    setPrg(100);E('bSave').style.display='block';
+    C._ext='webm';
+  }
+}
+
+// ══════════════════════════════════════════
+//  MP4 CONVERSION
+//  WebM → <video> seek frame-by-frame →
+//  canvas → VideoEncoder(H.264) → mp4-muxer
+// ══════════════════════════════════════════
+async function convertToMp4(webmBlob){
+  if(typeof VideoEncoder==='undefined'){
+    setSts('WebCodecs not available — saving as WebM');
+    C._ext='webm';E('bSave').style.display='block';return;
+  }
+  if(typeof Mp4Muxer==='undefined'){
+    setSts('mp4-muxer not loaded — saving as WebM');
+    C._ext='webm';E('bSave').style.display='block';return;
+  }
+
+  try{
+    const videoUrl=URL.createObjectURL(webmBlob);
+    const video=document.createElement('video');
+    video.muted=true;video.playsInline=true;video.preload='auto';
+    video.src=videoUrl;
+
+    await new Promise((res,rej)=>{
+      video.onloadeddata=res;
+      video.onerror=()=>rej(new Error('Cannot load video'));
+      setTimeout(()=>rej(new Error('Timeout')),15000);
+    });
+
+    const vw=video.videoWidth, vh=video.videoHeight;
+    if(!vw||!vh) throw new Error('No video dimensions');
+
+    // Use our measured duration (WebM duration is often Infinity)
+    const durationSec=recDurationMs/1000;
+    const fps=30;
+    const totalFrames=Math.max(1,Math.ceil(durationSec*fps));
+    const frameDurUs=Math.round(1_000_000/fps);
+
+    // Output size for MP4
+    let [ow,oh]=getOutSize(vw,vh);
+    if(ow%2)ow++;if(oh%2)oh++;
+
+    const cvs=document.createElement('canvas');
+    cvs.width=ow;cvs.height=oh;
+    const ctx=cvs.getContext('2d');
+
+    // Find H.264 codec
+    const codecs=['avc1.42001f','avc1.4D001F','avc1.640028'];
+    let codec=null;
+    for(const c of codecs){
+      try{
+        const r=await VideoEncoder.isConfigSupported({codec:c,width:ow,height:oh,bitrate:5_000_000,framerate:fps});
+        if(r.supported){codec=c;break;}
+      }catch(e){}
+    }
+    if(!codec) throw new Error('H.264 not supported');
+
+    // Muxer
+    const muxer=new Mp4Muxer.Muxer({
+      target:new Mp4Muxer.ArrayBufferTarget(),
+      video:{codec:'avc',width:ow,height:oh},
+      fastStart:'in-memory',
+      firstTimestampBehavior:'offset'
+    });
+
+    // Encoder
+    let encError=null;
+    const encoder=new VideoEncoder({
+      output:(chunk,meta)=>{muxer.addVideoChunk(chunk,meta);},
+      error:e=>{encError=e;}
+    });
+    encoder.configure({codec,width:ow,height:oh,bitrate:5_000_000,framerate:fps});
+
+    // Seek and encode frame by frame
+    for(let i=0;i<totalFrames;i++){
+      if(encError) throw encError;
+
+      const seekTime=i/fps;
+      // Clamp to avoid seeking past the actual content
+      video.currentTime=Math.min(seekTime, durationSec);
+
+      await new Promise((res)=>{
+        const onSeeked=()=>{video.removeEventListener('seeked',onSeeked);res();};
+        video.addEventListener('seeked',onSeeked);
+        // Fallback if seeked never fires (already at position)
+        setTimeout(res,200);
+      });
+
+      ctx.fillStyle='#fff';
+      ctx.fillRect(0,0,ow,oh);
+      ctx.drawImage(video,0,0,ow,oh);
+
+      const vf=new VideoFrame(cvs,{timestamp:i*frameDurUs,duration:frameDurUs});
+      encoder.encode(vf,{keyFrame:i%30===0});
+      vf.close();
+
+      if(i%10===0){
+        setSts('Converting: '+i+'/'+totalFrames);
+        setPrg(i/totalFrames*100);
+        await sleep(0);
+      }
+    }
+
+    setSts('Flushing encoder...');
+    await encoder.flush();
+    if(encError) throw encError;
+    encoder.close();
+
+    setSts('Finalizing MP4...');
+    muxer.finalize();
+    const mp4Data=muxer.target.buffer;
+    const mp4Blob=new Blob([mp4Data],{type:'video/mp4'});
+
+    URL.revokeObjectURL(videoUrl);
+    video.remove();
+    if(blobUrl)URL.revokeObjectURL(blobUrl);
+    blobUrl=URL.createObjectURL(mp4Blob);
+
+    const mb=(mp4Blob.size/1024/1024).toFixed(2);
+    setSts('Done — '+mb+' MB (MP4, '+ow+'×'+oh+')');
+    setPrg(100);E('bSave').style.display='block';
+    C._ext='mp4';
+
+  }catch(err){
+    console.error('MP4 conversion:',err);
+    setSts('MP4 failed: '+err.message+' — saving as WebM');
+    C._ext='webm';E('bSave').style.display='block';
+  }
+}
+
+function saveVideo(){
+  if(!blobUrl)return;
+  dlBlob(blobUrl,'scroll_'+getTimestamp()+'.'+(C._ext||'webm'));
+}
+</script>
+</body>
+</html>
